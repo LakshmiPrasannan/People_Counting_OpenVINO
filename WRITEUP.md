@@ -1,59 +1,81 @@
 # Project Write-Up
-
-You can use this document as a template for providing your project write-up. However, if you
-have a different format you prefer, feel free to use it as long as you answer all required
-questions.
+Here I am trying to explain the end to end pipeline of this project and mention some of my approaches taken in completing this one. 
 
 ## Explaining Custom Layers
-
-The process behind converting custom layers involves...
-
-Some of the potential reasons for handling custom layers are...
-
+This project consists of:
+1. Intel OpenVINO toolkit's model optimizer and inference engine.
+2. Computer Vision techniques for preprocessing of image data.
+3. MQTT Server to publish the statistics inferred from the model.
+   The Model Optimizer converted the TensorFlow Model to the IR format to handle the input streams and infer.
+    The step to conver the model is done outside of the main.py. 
+    Model selected: Faster R-CNN Inception V2 COCO
+    Tensor Flow tar file: ![faster_rcnn_inception_v2_coco_2018_01_28.tar.gz](http://download.tensorflow.org/models/object_detection/faster_rcnn_inception_v2_coco_2018_01_28.tar.gz)
+    Steps to convert the model to IR format:
+    * Downloaded the tar file mentioned
+    * using tar -xvf - extracted the file
+    * Using the following command generated the xml, bin and mapping file for the frozen model
+    
+    ***python /opt/intel/openvino/deployment_tools/model_optimizer/mo.py --input_model /home/workspace/faster_rcnn_inception_v2_coco_2018_01_28/frozen_inference_graph.pb --tensorflow_object_detection_api_pipeline_config /home/workspace/faster_rcnn_inception_v2_coco_2018_01_28/pipeline.config --reverse_input_channels --tensorflow_use_custom_operations_config /opt/intel/openvino/deployment_tools/model_optimizer/extensions/front/tf/faster_rcnn_support.json***
+    
+    Inside the main function the following steps were taken combining with the inference steps specific to Network Model of OpenVINO Toolkit. 
+    * Loading the model specifying the xml and bin file where the xml gave the configuration details and bin file gives the weights of the pretrained model.
+    * Use CV library functions to capture image frame from the video stream
+    * Understading the shape of the data being transferred, here its the size of the image frame being passed
+    * Preprocess the frame data using CV techniques like resizing to convert into model compatable format and transposing the matrix representation
+    * Start the Asynchronous execution of the inference model by passing the input data and request id. 
+    * Wait for the output and if wait is zero proceed with inferring statistics from the output data
+    * Print the wait time as inference time using CV methods onto the frame
+    * Logic to find the number of persons detected in a frame and the total count of people appeared in the frame
+        * Person is detected if the output tensors have probability value greater than a particular threshold
+        * If a new person enters the frame, person_detected counter is incremented and the last count of persons in the frame is updated
+        * The duration is incremented as the person stays in the frame, i.e. when the probability threshold is greater in the same loop
+        * By understanding the Inference time for the model and video's time taken have chosen 3s value as condition to update the total count
+    * person_detected, counter_total and duration to the MQTT server
+    * for the user to quit explicitly key_break is provided
 ## Comparing Model Performance
 
 My method(s) to compare models before and after conversion to Intermediate Representations
-were...
+were using the UI to see the realtime inference and result statistics.
+On using models before conversions to IR in the TensorFlow format I didn't have a server to interpret the results as in the edge platform which uses an MQTT server here. 
 
-The difference between model accuracy pre- and post-conversion was...
+The difference between model accuracy pre- and post-conversion was comparitively more same as the model used doesn't change.
 
-The size of the model pre- and post-conversion was...
+The size of the model pre- and post-conversion was lowered. On using the xml file and config the size of the model comparitively reduced although while interacting with the video frames inference did take time to respond. 
 
-The inference time of the model pre- and post-conversion was...
+The inference time of the model pre- and post-conversion was more as it took in an average 920 ms. 
 
 ## Assess Model Use Cases
 
-Some of the potential use cases of the people counter app are...
+Some of the potential use cases of the people counter app are in 
+* understanding the social distancing checkers now especially in the Covid times. 
+* checking for count of people who have used a certain service like say a public transport. 
 
-Each of these use cases would be useful because...
+Each of these use cases would be useful because this helps us in keeping safety norms, counts and statistics that can help for future planning and expansion. 
 
 ## Assess Effects on End User Needs
 
-Lighting, model accuracy, and camera focal length/image size have different effects on a
-deployed edge model. The potential effects of each of these are as follows...
+Lighting, model accuracy, and camera focal length/image size have different effects on a deployed edge model. The potential effects of each of these are as follows:
+
+With some of the models used the model accuracy kept varying with the factors like camera focal length/image. Especially while using lite models. However with the current model this wasn't an issue and we haven't done any conversions to the frame like grey image to understand the scene better. 
 
 ## Model Research
 
-[This heading is only required if a suitable model was not found after trying out at least three
-different models. However, you may also use this heading to detail how you converted 
-a successful model.]
-
 In investigating potential people counter models, I tried each of the following three models:
 
-- Model 1: [Name]
-  - [Model Source]
-  - I converted the model to an Intermediate Representation with the following arguments...
-  - The model was insufficient for the app because...
-  - I tried to improve the model for the app by...
+- Model 1: [MobileNetSSD]
+  - ![Model Source](https://github.com/C-Aniruddh/realtime_object_recognition)
+  - I converted the model to an Intermediate Representation with the following arguments from the caffe model of the MobileNet SSD which had MobileNetSSD_deploy.caffemodel and MobileNetSSD_deploy.prototxt.txt file. 
+  - The model was insufficient for the app because this model doesn't detect person when the person isn't facing camera. 
+  - I tried to improve the model for the app by using a model that can detect persons from any angle to the camera. 
   
-- Model 2: [Name]
-  - [Model Source]
-  - I converted the model to an Intermediate Representation with the following arguments...
-  - The model was insufficient for the app because...
-  - I tried to improve the model for the app by...
+- Model 2: [Faster R-CNN ResNet 50 COCO]
+  - ![Model Source](http://download.tensorflow.org/models/object_detection/faster_rcnn_resnet50_coco_2018_01_28.tar.gz)
+  - I converted the model to an Intermediate Representation with the following arguments from a tensor flow model with the frozen_inference_graph.pb, pipeline.config and faster_rcnn_support.json files. 
+  - The model was insufficient the inference time was too much and the model differed to detect with changes in lighthing, actions of humans. 
+  - I tried to improve the model for the app by another TensorFlow model. 
 
-- Model 3: [Name]
-  - [Model Source]
-  - I converted the model to an Intermediate Representation with the following arguments...
-  - The model was insufficient for the app because...
-  - I tried to improve the model for the app by...
+- Model 3: [Faster R-CNN Inception V2 COCO]
+  - ![Model Source](http://download.tensorflow.org/models/object_detection/faster_rcnn_inception_v2_coco_2018_01_28.tar.gz)
+  - I converted the model to an Intermediate Representation with the following arguments frozen_inference_graph.pb, pipeline.config and faster_rcnn_support.json files. 
+  - The model was sufficient for the app because it correctly detected humans even when not facing camera and not altering much with input variations with a considerably decent inference time. 
+  

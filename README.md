@@ -4,7 +4,11 @@
 |-----------------------|---------------|
 | Programming Language: |  Python 3.5 or 3.6 |
 
-![people-counter-python](./images/people-counter-image.png)
+![YouTube link to output video](https://youtu.be/50a0t-zmgPY)
+
+![People Counter output without humans](https://github.com/LakshmiPrasannan/People_Counting_OpenVINO/blob/master/People_Counting_Result_0.png)
+![People Counter output with humans and total count](https://github.com/LakshmiPrasannan/People_Counting_OpenVINO/blob/master/People_Counting_Result_0.png)
+![People Counter output with humans and number of people in frame](https://github.com/LakshmiPrasannan/People_Counting_OpenVINO/blob/master/People_Counting_Result_2.png)
 
 ## What it Does
 
@@ -99,9 +103,10 @@ From the main directory:
 
 ```
 cd webservice/server/node-server
+npm install
 node ./server.js
 ```
-
+If you still face error run npm install audit fix and npm install
 You should see the following message, if successful:
 ```
 Mosca server started.
@@ -112,6 +117,7 @@ Mosca server started.
 Open new terminal and run below commands.
 ```
 cd webservice/ui
+npm install
 npm run dev
 ```
 
