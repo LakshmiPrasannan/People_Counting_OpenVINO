@@ -1,7 +1,6 @@
 # Project Write-Up
 Here I am trying to explain the end to end pipeline of this project and mention some of my approaches taken in completing this one. 
 
-## Explaining Custom Layers
 This project consists of:
 1. Intel OpenVINO toolkit's model optimizer and inference engine.
 2. Computer Vision techniques for preprocessing of image data.
@@ -32,17 +31,41 @@ This project consists of:
         * By understanding the Inference time for the model and video's time taken have chosen 3s value as condition to update the total count
     * person_detected, counter_total and duration to the MQTT server
     * for the user to quit explicitly key_break is provided
+The command to run this program is as below:
+
+***python main.py -i resources/Pedestrian_Detect_2_1_1.mp4 -m frozen_inference_graph.xml -l /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/libcpu_extension_sse4.so -d CPU -pt 0.6 | ffmpeg -v warning -f rawvideo -pixel_format bgr24 -video_size 768x432 -framerate 24 -i - http://0.0.0.0:3004/fac.ffm***
+
+## Explaining Custom Layers
+![Architecture](https://github.com/LakshmiPrasannan/People_Counting_OpenVINO/blob/master/Faster_R_CNN_Architecture.png)
+
+In the layers of the model of Faster R-CNN object detection model
+    1. Proposing feature extraction over the image before region proposal so that the CNN need not be run unnecessarily on every predictions on the image. In some cases we can even have 2000 predictions, to improve the efficiency
+    2. Running one CNN over the entire image 
+    3. Using region proposal network (RPN) to propose the best possible region for detection
+    Here’s how the RPN worked:
+
+    * At the last layer of an initial CNN, a 3x3 sliding window moves across the feature map and maps it to a lower dimension (e.g. 256-d)
+    * For each sliding-window location, it generates multiple possible regions based on k fixed-ratio anchor boxes (default bounding boxes)
+    * Each region proposal consists of 
+    a) an “objectness” score for that region and 
+    b) Four coordinates representing the bounding box of the region to make the detection visible to the user. 
+    
+    4. A softmax layer that outputs the class probabilities directly so that that the result is now more like a classification than a regression. 
+    
+    In this layers the convolution layers are executed using Batch Normalizations in dimensions 1*1, 3*3 and using Max pooling for striding. 
+    
+
 ## Comparing Model Performance
 
 My method(s) to compare models before and after conversion to Intermediate Representations
-were using the UI to see the realtime inference and result statistics.
-On using models before conversions to IR in the TensorFlow format I didn't have a server to interpret the results as in the edge platform which uses an MQTT server here. 
+were running the video with TensorFlow's original documentation code for Object Detection using Faster R-CNN in the ![link](https://github.com/tensorflow/models/blob/master/research/object_detection/object_detection_tutorial.ipynb)
 
-The difference between model accuracy pre- and post-conversion was comparitively more same as the model used doesn't change.
+Though the person detection was happening on the video, there were intermittency in the detection that showed less accuracy and didn't detect the person while the person was moving.
+This sometimes caused incorrect numbers being counted in Total count value, thinking the new box obtained is a new person appearing on the screen.
+However this issue was completely overcome when the model was converted to IR format and run through inference requests. 
 
-The size of the model pre- and post-conversion was lowered. On using the xml file and config the size of the model comparitively reduced although while interacting with the video frames inference did take time to respond. 
+In the OpenVINO Toolkit the MQTT server helped to see the realtime output unlike the TensorFlow code where the output could not be deployed to the web (Which needed extra coding and infrastructure requirements.)
 
-The inference time of the model pre- and post-conversion was more as it took in an average 920 ms. 
 
 ## Assess Model Use Cases
 
