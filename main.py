@@ -38,7 +38,7 @@ HOSTNAME = socket.gethostname()
 IPADDRESS = socket.gethostbyname(HOSTNAME)
 MQTT_HOST = IPADDRESS
 MQTT_PORT = 3001
-MQTT_KEEPALIVE_INTERVAL = 60
+MQTT_KEEPALIVE_INTERVAL = 120
 
 def build_argparser():
     """
@@ -65,7 +65,25 @@ def build_argparser():
                         help="Probability threshold for detections filtering"
                         "(0.5 by default)")
     return parser
-
+def ssd_out(frame, result, frame_width, frame_height):
+    """
+    Parse SSD output.
+    :param frame: frame from camera/video
+    :param result: list contains the data to parse ssd
+    :return: person count and frame
+    """
+    current_count = 0
+    for obj in result[0][0]:
+        # Draw bounding box for object when it's probability is more than
+        #  the specified threshold
+        if obj[2] > prob_threshold:
+            xmin = int(obj[3] * frame_width)
+            ymin = int(obj[4] * frame_height)
+            xmax = int(obj[5] * frame_width)
+            ymax = int(obj[6] * frame_height)
+            cv2.rectangle(frame, (xmin, ymin), (xmax, ymax), (0, 55, 255), 1)
+            current_count = current_count + 1
+    return frame, current_count
 
 def connect_mqtt():
     ### TODO: Connect to the MQTT client ###
@@ -119,12 +137,13 @@ def infer_on_stream(args, client):
     request_id = 0 #For Async Inference
     #As there can be ni person detected in the initial frames
     #Assign zero to all the variables
-    current_duration = 0
-    duration_prev = 0
-    counter_total = 0
+    start_time = 0
+    duration = 0
+    last_duration = 0
+    total_count = 0
     count_publish = 0
     last_count = 0
-    counter = 0 #For detecting the start when person enters frame
+    
     ### TODO: Loop until stream is over ###
     while cap.isOpened():
         ### TODO: Read from the video capture ###
@@ -140,7 +159,9 @@ def infer_on_stream(args, client):
         
         ### TODO: Start asynchronous inference for specified request ###
         net_input = {'image_tensor': processed_image,'image_info': processed_image.shape[1:]}
-        duration_report = None
+        
+        duration_report = 0
+        
         inf_start = time.time()
         inference_network.exec_net(net_input, request_id)
         
@@ -154,50 +175,43 @@ def infer_on_stream(args, client):
                                .format(det_time * 1000)
             cv2.putText(frame, inf_time_message, (15, 15),cv2.FONT_HERSHEY_COMPLEX, 0.5, (200, 10, 10), 1)
          
-            person_detected = 0
-            probs = net_output[0, 0, :, 2]
-            for i, p in enumerate(probs):
-                if p > prob_threshold:
-                    
-                    person_detected += 1
-                    box = net_output[0, 0, i, 3:]
-                    p1 = (int(box[0] * frame_width), int(box[1] * frame_height))
-                    p2 = (int(box[2] * frame_width), int(box[3] * frame_height))
-                    frame = cv2.rectangle(frame, p1, p2, (0, 255, 0), 3)
-           
+            frame, current_count = ssd_out(frame, net_output, frame_width, frame_height)
             
-            if person_detected != counter:
-                last_count = counter
-                counter = person_detected
-                if current_duration >= 3:
-                    duration_prev = current_duration
-                    current_duration = 0
-                else:
-                    current_duration = duration_prev + current_duration
-                    duration_prev = 0  # unknown, not needed in this case
-            else:
-                current_duration += 1
-                if current_duration >= 3: #To compat with the video counter +/-1
-                    count_publish = counter
-                    if current_duration == 3 and counter > last_count:
-                        counter_total += counter - last_count
-                    elif current_duration == 3 and counter < last_count:
-                        duration_report = int((duration_prev / 10.0) * 1000)
-            n_person_message = " This is person number {} on the frame".format(counter_total)
-            cv2.putText(frame, n_person_message, (40,40),cv2.FONT_HERSHEY_COMPLEX, 0.5, (200, 10, 10), 1)
-
-            ### TODO: Calculate and send relevant information on ###
-            ### person_detected, counter_total and duration to the MQTT server ###
-            ### Topic "person": keys of "count" and "total" ###
-            ### Topic "person/duration": key of "duration" ###
-            client.publish('person',
-                           payload=json.dumps({
-                               'count': count_publish, 'total': counter_total}),qos=0, retain=False)
-            if duration_report is not None:
-                client.publish('person/duration',payload=json.dumps({'duration': duration_report}),qos=0, retain=False)
+            
+            # When new person enters the video
+            if current_count == 1:
+                n_person_message = " This is person number {} on the frame".format(total_count + 1)
+                cv2.putText(frame, n_person_message, (40,40),cv2.FONT_HERSHEY_COMPLEX, 0.5, (200, 10, 10), 1)
+            
+            if current_count > last_count:
                 
-                if key_pressed == 27:
-                    break
+                start_time = time.time()
+                
+                
+                
+            # Person duration in the video is calculated
+            if current_count < last_count:
+                duration = int(time.time() - start_time)
+                duration_report = int((duration / 10.0) * 1000)
+                # Publish messages to the MQTT server
+                
+                
+                if current_count == 0 and duration > 15 :
+                    total_count +=1
+            
+            client.publish('person',payload = json.dumps({'count': current_count, 'total': total_count}),qos = 0, retain = False)
+            
+            
+            if duration_report != None:
+                
+                client.publish('person/duration' , payload = json.dumps({'duration': duration_report}),qos = 0, retain = False)
+                
+            
+            if key_pressed == 27:
+                break
+            last_count = current_count
+        
+            
  
 
         ### TODO: Send the frame to the FFMPEG server ###
@@ -216,11 +230,12 @@ def main():
 
     :return: None
     """
-    # Grab command line args
-    #print("Starting mains")
-    args = build_argparser().parse_args()
+    global prob_threshold
     
-    #print(args)
+    # Grab command line args
+    args = build_argparser().parse_args()
+    prob_threshold = args.prob_threshold
+    
     # Connect to the MQTT server
     client = connect_mqtt()
     # Perform inference on the input stream
