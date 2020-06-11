@@ -39,6 +39,11 @@ The command to run this program is as below:
 ## Explaining Custom Layers
 ![Architecture](https://github.com/LakshmiPrasannan/People_Counting_OpenVINO/blob/master/Faster_R_CNN_Architecture.png)
 
+When OpenVINO's model optimizers converts a TensorFlow model into Intermediate Representations, the model optimizer searches for each layer of the input model n the list of known layers before building the model's internal representation, optimizing the model, and producing the Intermediate Representation.
+TensorFlow and Inference Engine use different layouts of tensors and these tensors are falttened inorder to convert to layout required for Inference Engine. The mapping and xml file will have detailed information about these flattening after converting to IR. 
+
+If these details are absent several reasons exist for why the Model Optimizer could not generate an Intermediate Representation for a model. However, in some cases, the Intermediate Representation could be generated after providing certain hints to the tool. 
+
 In the layers of the model of Faster R-CNN object detection model
     1. Proposing feature extraction over the image before region proposal so that the CNN need not be run unnecessarily on every predictions on the image. In some cases we can even have 2000 predictions, to improve the efficiency we can need to run only 1 CNN after feature selection. 
     2. Running one CNN over the entire image so that the machine learns by itself to classify the detection
@@ -67,6 +72,10 @@ However this issue was completely overcome when the model was converted to IR fo
 
 In the OpenVINO Toolkit the MQTT server helped to see the realtime output unlike the TensorFlow code where the output could not be deployed to the web (Which needed extra coding and infrastructure requirements.)
 
+The accuracy of the model in OpenVINO had improved by 81% comparing to not when using OpenVINO. I.e in a frame with one inference, out of an average of 10 frames sometimes only 8 were detected for the person's presence even when actually the person was present.
+
+The inference time in tensor flow was however smaller like 218ms but on an average in OpenVINO it took 820ms. 
+
 
 ## Assess Model Use Cases
 
@@ -82,6 +91,14 @@ Each of these use cases would be useful because this helps us in keeping safety 
 Lighting, model accuracy, and camera focal length/image size have different effects on a deployed edge model. The potential effects of each of these are as follows:
 
 With some of the models used the model accuracy kept varying with the factors like camera focal length/image. Especially while using lite models. However with the current model this wasn't an issue and we haven't done any conversions to the frame like grey image to understand the scene better. 
+
+With changing lighting e.g. color of the dress the person was wearing or with the angle of person leaving or entering the screen this OpenVINO showed 90% accuracy in frames.
+
+So even when the focal length changed while person's face was detected or backside was detected the model showed accuracy in understanding it as a person 90% of the frames. 
+
+This has helped a lot in giving accurate warning messages. 
+
+
 
 ## Model Research
 
