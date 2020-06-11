@@ -27,13 +27,14 @@ This project consists of:
     * Logic to find the number of persons detected in a frame and the total count of people appeared in the frame
         * Person is detected if the output tensors have probability value greater than a particular threshold
         * If a new person enters the frame, person_detected counter is incremented and the last count of persons in the frame is updated
-        * The duration is incremented as the person stays in the frame, i.e. when the probability threshold is greater in the same loop
-        * By understanding the Inference time for the model and video's time taken have chosen 3s value as condition to update the total count
-    * person_detected, counter_total and duration to the MQTT server
+        * The duration is calculated as the person stays in the frame, i.e. when the probability threshold is greater in the same loop
+        * By understanding the Inference time for the model and video's time taken I have chosen 15s value as condition to update the total count as well as the previous duration.
+        * If the current duration is found to be greater than the previous duration and the total counted person is not 1 (i.e. the person is not the first person on the frame), an alert message is printed on the frame. 
+    * current_count, total_count and duration to the MQTT server, where duration and total_count are published together and current_count is published after every loop. 
     * for the user to quit explicitly key_break is provided
 The command to run this program is as below:
 
-***python main.py -i resources/Pedestrian_Detect_2_1_1.mp4 -m frozen_inference_graph.xml -l /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/libcpu_extension_sse4.so -d CPU -pt 0.6 | ffmpeg -v warning -f rawvideo -pixel_format bgr24 -video_size 768x432 -framerate 24 -i - http://0.0.0.0:3004/fac.ffm***
+***python main.py -i resources/Pedestrian_Detect_2_1_1.mp4 -m frozen_inference_graph.xml -l /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/libcpu_extension_sse4.so -d CPU -pt 0.4 | ffmpeg -v warning -f rawvideo -pixel_format bgr24 -video_size 768x432 -framerate 24 -i - http://0.0.0.0:3004/fac.ffm***
 
 ## Explaining Custom Layers
 ![Architecture](https://github.com/LakshmiPrasannan/People_Counting_OpenVINO/blob/master/Faster_R_CNN_Architecture.png)
@@ -70,8 +71,9 @@ In the OpenVINO Toolkit the MQTT server helped to see the realtime output unlike
 ## Assess Model Use Cases
 
 Some of the potential use cases of the people counter app are in 
-* understanding the social distancing checkers now especially in the Covid times. 
-* checking for count of people who have used a certain service like say a public transport. 
+* Understanding the social distancing checkers now especially in the Covid times. 
+* Checking for count of people who have used a certain service like say a public transport. 
+* Check for people who spent more time than the average time and help them separately in case of students. 
 
 Each of these use cases would be useful because this helps us in keeping safety norms, counts and statistics that can help for future planning and expansion. 
 

@@ -4,15 +4,16 @@
 |-----------------------|---------------|
 | Programming Language: |  Python 3.5 or 3.6 |
 
-![YouTube link to output video](https://youtu.be/50a0t-zmgPY)
+![YouTube link to output video](https://youtu.be/lVRDdCIIiRs)
 
-![People Counter output without humans](https://github.com/LakshmiPrasannan/People_Counting_OpenVINO/blob/master/People_Counting_Result_0.png)
-![People Counter output with humans and total count](https://github.com/LakshmiPrasannan/People_Counting_OpenVINO/blob/master/People_Counting_Result_1.png)
-![People Counter output with humans and number of people in frame](https://github.com/LakshmiPrasannan/People_Counting_OpenVINO/blob/master/People_Counting_Result_2.png)
+![People Counter output without persons](https://github.com/LakshmiPrasannan/People_Counting_OpenVINO/blob/master/No_Person.png)
+![People Counter output with persons and total count](https://github.com/LakshmiPrasannan/People_Counting_OpenVINO/blob/master/People_Counting_Total_Counted.png)
+![People Counter output with persons and number of people in frame](https://github.com/LakshmiPrasannan/People_Counting_OpenVINO/blob/master/People_Counting_Result_People.png)
+![Alert message when current person takes more time than previous person](https://github.com/LakshmiPrasannan/People_Counting_OpenVINO/blob/master/Indicating_More_time.png)
 
 ## What it Does
 
-The people counter application will demonstrate how to create a smart video IoT solution using Intel® hardware and software tools. The app will detect people in a designated area, providing the number of people in the frame, average duration of people in frame, and total count.
+The people counter application will demonstrate how to create a smart video IoT solution using Intel® hardware and software tools. The app will detect people in a designated area, providing the number of people in the frame, average duration of people in frame, and total count. Once the average duration of the current person is greater than the previous person an alert message is triggered saying person number 'current_number' took more time than 'preveious_person_number'.
 
 ## How it Works
 
@@ -159,7 +160,7 @@ When running Intel® Distribution of OpenVINO™ toolkit Python applications on 
 Though by default application runs on CPU, this can also be explicitly specified by ```-d CPU``` command-line argument:
 
 ```
-python main.py -i resources/Pedestrian_Detect_2_1_1.mp4 -m frozen_inference_graph.xml -l /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/libcpu_extension_sse4.so -d CPU -pt 0.6 | ffmpeg -v warning -f rawvideo -pixel_format bgr24 -video_size 768x432 -framerate 24 -i - http://0.0.0.0:3004/fac.ffm
+python main.py -i resources/Pedestrian_Detect_2_1_1.mp4 -m frozen_inference_graph.xml -l /opt/intel/openvino/deployment_tools/inference_engine/lib/intel64/libcpu_extension_sse4.so -d CPU -pt 0.4 | ffmpeg -v warning -f rawvideo -pixel_format bgr24 -video_size 768x432 -framerate 24 -i - http://0.0.0.0:3004/fac.ffm
 ```
 If you are in the classroom workspace, use the “Open App” button to view the output. If working locally, to see the output on a web based interface, open the link [http://0.0.0.0:3004](http://0.0.0.0:3004/) in a browser.
 
