@@ -15,6 +15,8 @@
 
 The people counter application will demonstrate how to create a smart video IoT solution using Intel® hardware and software tools. The app will detect people in a designated area, providing the number of people in the frame, average duration of people in frame, and total count. Once the average duration of the current person is greater than the previous person an alert message is triggered saying person number 'current_number' took more time than 'preveious_person_number'.
 
+If you see the result video we can find the alert message is triggered when person 2 leaves the video as he takes more time than person 1. But the alert message isn't triggered when the 4th person leave the scene as he takes lesser time than the 3rd person. 
+
 ## How it Works
 
 The counter will use the Inference Engine included in the Intel® Distribution of OpenVINO™ Toolkit. The model used should be able to identify people in a video frame. The app should count the number of people in the current frame, the duration that a person is in the frame (time elapsed between entering and exiting a frame) and the total count of people. It then sends the data to a local web server using the Paho MQTT Python package.
