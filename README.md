@@ -4,7 +4,7 @@
 |-----------------------|---------------|
 | Programming Language: |  Python 3.5 or 3.6 |
 
-![YouTube link to output video](https://youtu.be/lVRDdCIIiRs)
+![YouTube link to output video](https://www.youtube.com/watch?v=lVRDdCIIiRs&feature=youtu.be)
 
 ![People Counter output without persons](https://github.com/LakshmiPrasannan/People_Counting_OpenVINO/blob/master/No_Person.png)
 ![People Counter output with persons and total count](https://github.com/LakshmiPrasannan/People_Counting_OpenVINO/blob/master/People_Counting_Total_Counted.png)
