@@ -143,6 +143,7 @@ def infer_on_stream(args, client):
     total_count = 0
     count_publish = 0
     last_count = 0
+    prev_duration = 0
     
     ### TODO: Loop until stream is over ###
     while cap.isOpened():
@@ -180,8 +181,13 @@ def infer_on_stream(args, client):
             
             # When new person enters the video
             if current_count == 1:
-                n_person_message = " This is person number {} on the frame".format(total_count + 1)
-                cv2.putText(frame, n_person_message, (40,40),cv2.FONT_HERSHEY_COMPLEX, 0.5, (200, 10, 10), 1)
+                if total_count == 0:
+                    n_person_message = " This is person number {} on the frame".format(1)
+                    cv2.putText(frame, n_person_message, (40,40),cv2.FONT_HERSHEY_COMPLEX, 0.5, (200, 10, 10), 1)
+                
+                else:
+                    n_person_message = " This is person number {} on the frame".format(total_count + 1)
+                    cv2.putText(frame, n_person_message, (40,40),cv2.FONT_HERSHEY_COMPLEX, 0.5, (200, 10, 10), 1)
             
             if current_count > last_count:
                 
@@ -197,19 +203,27 @@ def infer_on_stream(args, client):
                 
                 
                 if current_count == 0 and duration > 15 :
-                    total_count +=1
+                    total_count += 1
+                    
+                    if duration_report != None:
+                        client.publish('person/duration' , payload = json.dumps({'duration': duration_report}),qos = 0, retain = False)
+                        client.publish('person',payload = json.dumps({'total': total_count}))
+                        if total_count != 1 and prev_duration < duration: #total_count calculated to eliminate first person 
+                            n_person_message = "Person number {} took more time in the frame than person number {}".format(total_count, total_count - 1)
+                            cv2.putText(frame, n_person_message, (80,80),cv2.FONT_HERSHEY_COMPLEX, 0.5, (10, 10, 200), 1)
+                            
             
-            client.publish('person',payload = json.dumps({'count': current_count, 'total': total_count}),qos = 0, retain = False)
+            client.publish('person',payload = json.dumps({'count': current_count}))
             
             
-            if duration_report != None:
-                
-                client.publish('person/duration' , payload = json.dumps({'duration': duration_report}),qos = 0, retain = False)
+            
                 
             
             if key_pressed == 27:
                 break
             last_count = current_count
+            prev_duration = duration
+            
         
             
  
